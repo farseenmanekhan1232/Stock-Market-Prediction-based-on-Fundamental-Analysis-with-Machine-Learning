@@ -166,15 +166,23 @@ def featureEngineering(tickers):
 
         # Compute log returns trend
         prices['log returns trend'] = prices['log returns'].apply(lambda x: 1 if x > 0 else 0)
-        # Import expected eps data
-        try:
-            expected_eps = pd.read_csv(f'data/{ticker}_expected_eps.csv')
-            FD = FD.merge(expected_eps, how='outer', on='ticker')
-        except FileNotFoundError:
-            print('No such file or directory')
+
         # Merge Fundamental and price data
         FD.sort_values(by=['date'], inplace=True)
         FD = FD.merge(prices, how='outer', on=['date', 'ticker'])
         data = data.append(FD)
 
     return data
+
+
+def hybrid_dataset_construction(regressor, X_train, X_test):
+    Y_hat_train = regressor.predict(X_train)
+    Y_hat_train = np.reshape(Y_hat_train, (Y_hat_train.shape[0], 1))
+    X_train = np.append(X_train, Y_hat_train, axis=1)
+
+    Y_hat_test = regressor.predict(X_test)
+    Y_hat_test = np.reshape(Y_hat_test, (Y_hat_test.shape[0], 1))
+    X_test = np.append(X_test, Y_hat_test, axis=1)
+    return X_train, X_test
+
+

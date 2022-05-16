@@ -34,7 +34,7 @@ def NN_MO(X_train, y_train, X_test, y_test, y_train_class, y_test_class):
     model.compile(loss=['mse', 'binary_crossentropy'], optimizer='adam')
 
     # fit model
-    model.fit(X_train, [y_train, y_train_class], epochs=10, batch_size=32, verbose=2)
+    model.fit(X_train, [y_train, y_train_class], epochs=100, batch_size=32, verbose=2)
 
     # make predictions on test set
     yhat1, yhat2 = model.predict(X_test)
@@ -63,15 +63,17 @@ def NN_MO(X_train, y_train, X_test, y_test, y_train_class, y_test_class):
 # Neural Network
 def NN(X_train, y_train, X_test, y_test):
     model = models.Sequential()
-    model.add(layers.Dense(19, input_dim=19, activation='relu', kernel_initializer='he_normal'))
-    model.add(layers.Dense(10, activation='relu', kernel_initializer='he_normal'))
+    model.add(layers.Dense(64, input_dim=11, activation='relu', kernel_initializer='he_normal'))
+    model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal'))
     model.add(layers.Dense(1, activation='linear'))
-    model.compile(optimizer='adam', loss='mse', metrics=['mae'])
+    model.compile(optimizer='adam', loss='mse')
 
     # Training
     # define early stopping
-    callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=3)
-    model.fit(X_train, y_train, epochs=10, callbacks=[callback], batch_size=1)
+    #callback = tf.keras.callbacks.EarlyStopping(monitor='loss', patience=5)
+    history = model.fit(X_train, y_train, epochs=100, batch_size=32)
+
+    loss = history.history['loss']
 
     # Prediction
     y_pred = model.predict(X_test)
@@ -81,6 +83,8 @@ def NN(X_train, y_train, X_test, y_test):
     mae = mean_absolute_error(y_test, y_pred)
     # RMSE
     rmse = mean_squared_error(y_test, y_pred, squared=False)
+    # MDA
+    mda = np.mean((np.sign(y_test[1:] - y_test[:-1]) == np.sign(y_pred[1:] - y_pred[:-1])).astype(int))
 
     # Append results
     y_predictions = []
@@ -88,7 +92,7 @@ def NN(X_train, y_train, X_test, y_test):
         y_predictions.append(float(y_pred[i]))
     y_pred = np.array(y_predictions)
 
-    return y_pred, mae, rmse
+    return y_pred, mae, rmse, mda, loss
 
 
 # Random forest regressor
@@ -168,4 +172,4 @@ def xgboostRegressor(X_train, y_train, X_test, y_test):
     # RMSE
     rmse = mean_squared_error(y_test, y_pred, squared=False)
 
-    return y_pred, mae, rmse
+    return y_pred, mae, rmse, regressor
