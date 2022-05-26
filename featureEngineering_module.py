@@ -175,7 +175,7 @@ def featureEngineering(tickers):
     return data
 
 
-def hybrid_dataset_construction(regressor, X_train, X_test):
+def hybrid_dataset_construction(regressor, X_train, X_test, X_val):
     Y_hat_train = regressor.predict(X_train)
     Y_hat_train = np.reshape(Y_hat_train, (Y_hat_train.shape[0], 1))
     X_train = np.append(X_train, Y_hat_train, axis=1)
@@ -183,6 +183,10 @@ def hybrid_dataset_construction(regressor, X_train, X_test):
     Y_hat_test = regressor.predict(X_test)
     Y_hat_test = np.reshape(Y_hat_test, (Y_hat_test.shape[0], 1))
     X_test = np.append(X_test, Y_hat_test, axis=1)
-    return X_train, X_test
+
+    Y_hat_val = regressor.predict(X_val)
+    Y_hat_val = np.reshape(Y_hat_val, (Y_hat_val.shape[0], 1))
+    X_val = np.append(X_val, Y_hat_val, axis=1)
+    return X_train, X_test, X_val
 
 

@@ -3,6 +3,9 @@ import sklearn
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 import pandas as pd
 
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+import portfolio_optimization_module
 
 def preprocessing(data):
     # Fill NaN with zeros and reset index
@@ -27,19 +30,23 @@ def preprocessing(data):
     data = data[data['date'] != 0]
 
     # Split to training and test set
-    training_data_with_dates = data.loc[data['date'] <= '2020-05-01']
+    training_data_with_dates = data.loc[data['date'] <= '2019-05-01']
+    validation_data_with_dates = data.loc[(data['date'] > '2019-10-01') & (data['date'] <= '2020-05-01')]
     test_data_with_dates = data.loc[data['date'] > '2020-05-01']
 
     # Remove nan values
     train_data_with_dates = training_data_with_dates.fillna(0)
+    validation_data_with_dates = validation_data_with_dates.fillna(0)
     test_data_with_dates = test_data_with_dates.fillna(0)
 
     # Remove None values and replace them with zeros
     train_data_with_dates = train_data_with_dates.replace(to_replace='None', value=0)
+    validation_data_with_dates = validation_data_with_dates.replace(to_replace='None', value=0)
     test_data_with_dates = test_data_with_dates.replace(to_replace='None', value=0)
 
     # Drop irrelevant columns: {Date, Ticker}
     train_data = train_data_with_dates.drop(columns=['ticker', 'date'])
+    val_data = validation_data_with_dates.drop(columns=['ticker', 'date'])
     test_data = test_data_with_dates.drop(columns=['ticker', 'date'])
 
     # Select target value --- simple returns
@@ -55,6 +62,10 @@ def preprocessing(data):
     y_test_class = test_data['log returns trend'].values
     X_test = test_data.drop(columns=['simple returns', 'log returns', 'log returns trend']).values
 
+    y_val = val_data['log returns'].values
+    y_val_class = val_data['log returns trend'].values
+    X_val = val_data.drop(columns=['simple returns', 'log returns', 'log returns trend']).values
+
     y_train = np.asarray(y_train).astype('float32').reshape((-1, 1))
     y_test = np.asarray(y_test).astype('float32').reshape((-1, 1))
     y_train_class = np.asarray(y_train_class).astype('float32').reshape((-1, 1))
@@ -63,6 +74,37 @@ def preprocessing(data):
     # Standardization
     scaler = StandardScaler()
     X_train = scaler.fit_transform(X_train)
+    X_val = scaler.transform(X_val)
     X_test = scaler.transform(X_test)
 
-    return X_train, y_train, X_test, y_test, y_train_class, y_test_class, columns, test_data_with_dates
+    return X_train, y_train, X_test, y_test, y_train_class, y_test_class, columns, test_data_with_dates, X_val, y_val,\
+           y_val_class, validation_data_with_dates
+
+
+def grid_construction():
+    grid = {'batch_size': [60, 80, 100],
+            'epochs': [10, 20, 30],
+            'learning_rate': [0.0001, 0.001, 0.01]}
+
+    return grid
+
+
+def evaluation(y_val, y_hat_val):
+    mse = mean_squared_error(y_val, y_hat_val)
+    mae = mean_absolute_error(y_val, y_hat_val)
+    r2 = r2_score(y_val, y_hat_val)
+
+    return mse, mae, r2
+
+
+def financialEvaluation(data_with_dates, y_pred):
+    backtesting_data = data_with_dates[['date', 'ticker']]
+    backtesting_data.reset_index(inplace=True, drop=True)
+    backtesting_data['expected_returns'] = y_pred
+
+    # portfolio optimization
+    keep_top_k_stocks = 10
+    optimal_weights, unique_tickers = portfolio_optimization_module.portfolio_optimization(backtesting_data,
+                                                                                           keep_top_k_stocks)
+    # calculate portfolio performance
+    return portfolio_optimization_module.calc_portfolio_performance(optimal_weights, unique_tickers)
