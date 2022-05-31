@@ -65,7 +65,7 @@ def NN_MO(X_train, y_train, X_test, y_test, y_train_class, y_test_class):
 
 
 # Neural Network
-def NN(learning_rate):
+def NN(learning_rate, loss):
     # Experiments - layer number, learning, losses
     # Criteria - statistical, financial
     # Optimization criteria in other literature work
@@ -74,7 +74,7 @@ def NN(learning_rate):
     model.add(layers.Dense(64, activation='relu', kernel_initializer='he_normal'))
     model.add(layers.Dense(1, activation='linear'))
     optimizer = Adam(learning_rate=learning_rate)
-    model.compile(optimizer=optimizer, loss='mse', metrics='mse')
+    model.compile(optimizer=optimizer, loss=loss, metrics='mse')
 
     # Training
     # define early stopping

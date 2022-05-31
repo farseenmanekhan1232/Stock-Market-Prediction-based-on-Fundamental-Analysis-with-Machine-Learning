@@ -1,5 +1,9 @@
 import numpy as np
 import pandas as pd
+
+import warnings
+warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+
 import scipy.sparse as sp
 import scipy
 
@@ -23,15 +27,17 @@ def portfolio_optimization(backtesting_data, keep_top_k_stocks):
     tickers_to_delete = []
     for ticker in unique_tickers:
         inside = backtesting_data.loc[backtesting_data['ticker'] == ticker]
-        if len(inside['date']) != 6:    # change to 6 for test set and 2 for validation set
+        if len(inside['date']) != 6:    # !!! change to 6 for test set and 2 for validation set
             tickers_to_delete.append(ticker)
     for ticker in tickers_to_delete:
         backtesting_data.drop(backtesting_data[backtesting_data['ticker'] == ticker].index, inplace=True)
 
     unique_tickers = backtesting_data['ticker'].unique().tolist()
     for ticker in unique_tickers:
-        backtesting_data['date'].loc[backtesting_data['ticker'] == ticker] = ['2020-06-30', '2020-09-30', '2020-12-31',
-                                                                              '2021-03-31', '2021-06-30', '2021-09-30']
+        backtesting_data['date'].loc[backtesting_data['ticker'] == ticker] = ['2020-06-30', '2020-09-30'
+            , '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
+            #['2020-06-30', '2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
+    # ['2019-12-31', '2020-03-31']
     expected_returns = pd.DataFrame()
     for ticker in unique_tickers:
         inside = backtesting_data['expected_returns'].loc[backtesting_data['ticker'] == ticker].values
@@ -90,8 +96,7 @@ def calc_portfolio_performance(optimal_weights, unique_tickers):
     for ticker in unique_tickers:
         inside_df = pd.read_csv(f'Price data/{ticker}.csv')
         # filter dates
-        inside_df = inside_df.loc[inside_df['Date'].isin(['2020-06-30', '2020-09-30', '2020-12-31', '2021-03-31',
-                                                         '2021-06-30', '2021-09-30'])]
+        inside_df = inside_df.loc[inside_df['Date'].isin(['2020-06-30', '2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30'])]
         # VALIDATION FILTERING
         #inside_df = inside_df.loc[inside_df['Date'].isin(['2019-12-31', '2020-03-31'])]
         inside_df.drop(columns='Date', inplace=True)
@@ -107,8 +112,10 @@ def calc_portfolio_performance(optimal_weights, unique_tickers):
     for i in range(portfolio_returns.shape[0]):
         portfolio_returns[i] = sum(optimal_weights * total_price_returns.iloc[i, :])
 
-    portfolio_returns = pd.DataFrame(portfolio_returns, index=['2020-09-30', '2020-12-31', '2021-03-31',
-                                                         '2021-06-30', '2021-09-30'])
+    portfolio_returns = pd.DataFrame(portfolio_returns, index=['2020-09-30', '2020-12-31', '2021-03-31'
+        , '2021-06-30', '2021-09-30'])
+    # index=['2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
+    # ['2020-03-31']
     cumulative_return = (portfolio_returns + 1).cumprod() - 1
     sharpe_ratio = portfolio_returns.mean() / portfolio_returns.std()
     volatility = portfolio_returns.std()

@@ -1,7 +1,11 @@
 import numpy as np
 import sklearn
+import tensorflow
 from sklearn.preprocessing import PolynomialFeatures, StandardScaler
 import pandas as pd
+
+from tensorflow.keras.losses import Huber, CosineSimilarity, MeanSquaredLogarithmicError
+
 
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 
@@ -84,7 +88,7 @@ def preprocessing(data):
 def grid_construction():
     grid = {'batch_size': [60, 80, 100],
             'epochs': [10, 20, 30],
-            'learning_rate': [0.0001, 0.001, 0.01]}
+            'loss': [Huber(), CosineSimilarity(), MeanSquaredLogarithmicError()]}
 
     return grid
 
@@ -103,7 +107,7 @@ def financialEvaluation(data_with_dates, y_pred):
     backtesting_data['expected_returns'] = y_pred
 
     # portfolio optimization
-    keep_top_k_stocks = 10
+    keep_top_k_stocks = backtesting_data.shape[1] # 10 or 50
     optimal_weights, unique_tickers = portfolio_optimization_module.portfolio_optimization(backtesting_data,
                                                                                            keep_top_k_stocks)
     # calculate portfolio performance
