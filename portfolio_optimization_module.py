@@ -34,8 +34,7 @@ def portfolio_optimization(backtesting_data, keep_top_k_stocks):
 
     unique_tickers = backtesting_data['ticker'].unique().tolist()
     for ticker in unique_tickers:
-        backtesting_data['date'].loc[backtesting_data['ticker'] == ticker] = ['2020-06-30', '2020-09-30'
-            , '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
+        backtesting_data['date'].loc[backtesting_data['ticker'] == ticker] = ['2020-06-30', '2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
             #['2020-06-30', '2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
     # ['2019-12-31', '2020-03-31']
     expected_returns = pd.DataFrame()
@@ -92,6 +91,7 @@ def preprocessing_historical_prices(inside_df):
 
 
 def calc_portfolio_performance(optimal_weights, unique_tickers):
+    optimal_weights = pd.DataFrame(optimal_weights, index=unique_tickers)
     df = pd.DataFrame()
     for ticker in unique_tickers:
         inside_df = pd.read_csv(f'Price data/{ticker}.csv')
@@ -102,18 +102,26 @@ def calc_portfolio_performance(optimal_weights, unique_tickers):
         inside_df.drop(columns='Date', inplace=True)
         df[ticker] = inside_df
 
+    # find columns that contain nan values
+    tickers_to_delete = df.columns[df.isna().any()].tolist()
+
+    df.dropna(inplace=True, axis=1)
     df.reset_index(drop=True, inplace=True)
+
+    # delete weights according to tickers to delete
+    optimal_weights = optimal_weights.drop(index=tickers_to_delete)
+    optimal_weights = optimal_weights.values
+    optimal_weights = optimal_weights.reshape(len(optimal_weights))
     #total_price_returns = (df.iloc[-1, :] - df.iloc[0, :]) / df.iloc[0, :]
     total_price_returns = df.pct_change()
-    total_price_returns.dropna(inplace=True)
+    total_price_returns.dropna(inplace=True, axis=0)
     # compute weighted returns
     portfolio_value = 10000
     portfolio_returns = np.zeros(total_price_returns.shape[0])
     for i in range(portfolio_returns.shape[0]):
         portfolio_returns[i] = sum(optimal_weights * total_price_returns.iloc[i, :])
 
-    portfolio_returns = pd.DataFrame(portfolio_returns, index=['2020-09-30', '2020-12-31', '2021-03-31'
-        , '2021-06-30', '2021-09-30'])
+    portfolio_returns = pd.DataFrame(portfolio_returns, index=['2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30'])
     # index=['2020-09-30', '2020-12-31', '2021-03-31', '2021-06-30', '2021-09-30']
     # ['2020-03-31']
     cumulative_return = (portfolio_returns + 1).cumprod() - 1

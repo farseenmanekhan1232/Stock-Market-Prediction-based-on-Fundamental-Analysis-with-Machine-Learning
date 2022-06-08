@@ -88,7 +88,7 @@ def preprocessing(data):
 def grid_construction():
     grid = {'batch_size': [60, 80, 100],
             'epochs': [10, 20, 30],
-            'loss': [Huber(), CosineSimilarity(), MeanSquaredLogarithmicError()]}
+            'loss': ['mse', 'mae', Huber(), CosineSimilarity(), MeanSquaredLogarithmicError()]}
 
     return grid
 
@@ -97,8 +97,17 @@ def evaluation(y_val, y_hat_val):
     mse = mean_squared_error(y_val, y_hat_val)
     mae = mean_absolute_error(y_val, y_hat_val)
     r2 = r2_score(y_val, y_hat_val)
+    # convert to float32
+    y_val = y_val.astype('float32')
+    y_hat_val = y_hat_val.astype('float32')
+    h = Huber()
+    huber = h(y_val, y_hat_val).numpy()
+    cs = CosineSimilarity()
+    cosine_similarity = cs(y_val, y_hat_val).numpy()
+    msle = MeanSquaredLogarithmicError()
+    logarithmic_error = msle(y_val, y_hat_val)
 
-    return mse, mae, r2
+    return mse, mae, r2, huber, cosine_similarity, logarithmic_error
 
 
 def financialEvaluation(data_with_dates, y_pred):
@@ -107,7 +116,8 @@ def financialEvaluation(data_with_dates, y_pred):
     backtesting_data['expected_returns'] = y_pred
 
     # portfolio optimization
-    keep_top_k_stocks = backtesting_data.shape[1] # 10 or 50
+    print(backtesting_data.shape[0])
+    keep_top_k_stocks = 50  # 20 or 50 or 421
     optimal_weights, unique_tickers = portfolio_optimization_module.portfolio_optimization(backtesting_data,
                                                                                            keep_top_k_stocks)
     # calculate portfolio performance
