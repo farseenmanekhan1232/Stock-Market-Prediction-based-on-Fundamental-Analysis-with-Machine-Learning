@@ -151,6 +151,9 @@ def xgboostRegressor(X_train, y_train, X_test, y_test):
     # Training
     regressor.fit(X_train, y_train)
 
+    # Feature importance
+    importances = regressor.feature_importances_
+
     # Prediction
     y_pred = regressor.predict(X_test)
 
@@ -163,4 +166,4 @@ def xgboostRegressor(X_train, y_train, X_test, y_test):
     # R2
     r2 = r2_score(y_test, y_pred)
 
-    return y_pred, mae, mse, r2, regressor
+    return y_pred, mae, mse, r2, regressor, importances

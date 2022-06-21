@@ -48,7 +48,15 @@ if __name__ == '__main__':
 
     # run xgboost regressor model
     import regression_models
-    reg_pred, mae, mse, r2, xgboostRegressor = regression_models.xgboostRegressor(X_train, y_train, X_test, y_test)
+    reg_pred, mae, mse, r2, xgboostRegressor, importances = regression_models.xgboostRegressor(X_train, y_train, X_test, y_test)
+
+    # sort importances
+    importances, columns = zip(*sorted(zip(importances, columns)))
+
+    # plot features importances
+    plt.plot(columns, importances)
+    plt.xticks(rotation=90)
+    plt.tight_layout()
 
     # report regression metrics
     print('Regression metrics')
@@ -58,7 +66,7 @@ if __name__ == '__main__':
 
     # Construct new dataset based on xgboost regression results
     X_train, X_test, X_val = featureEngineering_module.hybrid_dataset_construction(xgboostRegressor, X_train, X_test, X_val)
-    columns.append('xgboost_predictions')
+    columns = columns + ('xgboost_predictions',)
 
     # keep fundamentals and xgboost predictions
     X_train = X_train[:, np.r_[0:13, -1]]
@@ -66,6 +74,7 @@ if __name__ == '__main__':
     del columns[13:-1]
 
     X_test = X_test[:, np.r_[0:13, -1]]
+
     '''
     # perform grid search on validation set
     # define the grid search parameters
@@ -145,14 +154,6 @@ if __name__ == '__main__':
     # AFTER EXPERIMENTATION: batch_size:80, epochs:10, loss:mse
     print(optimization_results['huber'].idxmin())
 
-    # select model tha maximizes cosine similarity
-    # AFTER EXPERIMENTATION: batch_size:60, epochs:30, loss:Cosine similarity
-    print(optimization_results['cosine similarity'].idxmax())
-
-    # select model tha minimizes mean squared logarithmic error
-    # AFTER EXPERIMENTATION: batch_size:60, epochs:10, loss:Cosine similarity
-    print(optimization_results['msle'].idxmin())
-
     # select model that maximizes portfolio profitability
     # AFTER EXPERIMENTATION: batch_size:100, epochs:20, learning_rate:mae
     print(optimization_results['cum return'].idxmax())
@@ -168,13 +169,19 @@ if __name__ == '__main__':
     history = model.fit(np.concatenate((X_train, X_val), axis=0), np.concatenate((y_train, y_val), axis=0),
                         batch_size=80, epochs=10, validation_data=(X_val, y_val), verbose=False)
 
-    plt.figure(1)
-    plt.plot(history.history['loss'], color='b', label='train loss')
-    plt.plot(history.history['val_loss'], color='r', label='val_loss')
-    plt.xlabel('epochs')
-    plt.ylabel('Huber loss')
-    plt.legend()
-    plt.title('Training loss for MIN MSE model')
+    fig, ax = plt.subplots(5, sharex=True)
+    fig.set_figheight(10)
+    fig.subplots_adjust(hspace=1)
+    fig.set_figwidth(6)
+    #fig.tight_layout()
+    for a in ax.flat:
+        a.set(xlabel='Epochs', ylabel='Loss')
+
+
+    ax[0].plot(history.history['loss'], color='b', label='train loss')
+    ax[0].plot(history.history['val_loss'], color='r', label='val_loss')
+    ax[0].legend()
+    ax[0].set_title('Training loss for MIN MSE model')
     # make predictions on test set and evaluate
     y_pred = model.predict(X_test)
     predictions.append(y_pred)
@@ -185,6 +192,7 @@ if __name__ == '__main__':
     print('Huber =', np.round(huber, 5))
     print('Cosine Similarity =', np.round(cs, 5))
     print('MSLE =', np.round(msle, 5))
+    print('Pearson Correlation =', np.round(pearsonr(y_pred[:, 0], y_test[:, 0]), 5))
 
     # financial evaluation
     portfolio_ret, cum_ret, sharpe_ratio, volatility = preprocessing_module.financialEvaluation(test_data_with_dates, y_pred)
@@ -201,13 +209,9 @@ if __name__ == '__main__':
     history = model.fit(np.concatenate((X_train, X_val), axis=0), np.concatenate((y_train, y_val), axis=0),
                         batch_size=80, epochs=10, validation_data=(X_val, y_val), verbose=False)
 
-    plt.figure(2)
-    plt.plot(history.history['loss'], color='b', label='train loss')
-    plt.plot(history.history['val_loss'], color='r', label='val_loss')
-    plt.xlabel('epochs')
-    plt.ylabel('Huber loss')
-    plt.legend()
-    plt.title('Training loss for MIN MAE model')
+    ax[1].plot(history.history['loss'], color='b', label='train loss')
+    ax[1].plot(history.history['val_loss'], color='r', label='val_loss')
+    ax[1].set_title('Training loss for MIN MAE model')
 
     # make predictions on test set and evaluate
     y_pred = model.predict(X_test)
@@ -219,6 +223,7 @@ if __name__ == '__main__':
     print('Huber =', np.round(huber, 5))
     print('Cosine Similarity =', np.round(cs, 5))
     print('MSLE =', np.round(msle, 5))
+    print('Pearson Correlation =', np.round(pearsonr(y_pred[:, 0], y_test[:, 0]), 5))
 
     # financial evaluation
     portfolio_ret, cum_ret, sharpe_ratio, volatility = preprocessing_module.financialEvaluation(test_data_with_dates, y_pred)
@@ -234,13 +239,9 @@ if __name__ == '__main__':
     history = model.fit(np.concatenate((X_train, X_val), axis=0), np.concatenate((y_train, y_val), axis=0),
                         batch_size=80, epochs=10, validation_data=(X_val, y_val), verbose=False)
 
-    plt.figure(3)
-    plt.plot(history.history['loss'], color='b', label='train loss')
-    plt.plot(history.history['val_loss'], color='r', label='val_loss')
-    plt.xlabel('epochs')
-    plt.ylabel('Huber loss')
-    plt.legend()
-    plt.title('Training loss for MAX R-Squared model')
+    ax[2].plot(history.history['loss'], color='b', label='train loss')
+    ax[2].plot(history.history['val_loss'], color='r', label='val_loss')
+    ax[2].set_title('Training loss for MAX R-Squared model')
 
     # make predictions on test set and evaluate
     y_pred = model.predict(X_test)
@@ -253,6 +254,7 @@ if __name__ == '__main__':
     print('Huber =', np.round(huber, 5))
     print('Cosine Similarity =', np.round(cs, 5))
     print('MSLE =', np.round(msle, 5))
+    print('Pearson Correlation =', np.round(pearsonr(y_pred[:, 0], y_test[:, 0]), 5))
 
     # financial evaluation
     portfolio_ret, cum_ret, sharpe_ratio, volatility = preprocessing_module.financialEvaluation(test_data_with_dates,
@@ -269,13 +271,9 @@ if __name__ == '__main__':
     history = model.fit(np.concatenate((X_train, X_val), axis=0), np.concatenate((y_train, y_val), axis=0),
                         batch_size=80, epochs=10, validation_data=(X_val, y_val), verbose=False)
 
-    plt.figure(4)
-    plt.plot(history.history['loss'], color='b', label='train loss')
-    plt.plot(history.history['val_loss'], color='r', label='val_loss')
-    plt.xlabel('epochs')
-    plt.ylabel('Huber loss')
-    plt.legend()
-    plt.title('Training loss for MIN Huber model')
+    ax[3].plot(history.history['loss'], color='b', label='train loss')
+    ax[3].plot(history.history['val_loss'], color='r', label='val_loss')
+    ax[3].set_title('Training loss for MIN Huber model')
 
     # make predictions on test set and evaluate
     y_pred = model.predict(X_test)
@@ -288,6 +286,7 @@ if __name__ == '__main__':
     print('Huber =', np.round(huber, 5))
     print('Cosine Similarity =', np.round(cs, 5))
     print('MSLE =', np.round(msle, 5))
+    print('Pearson Correlation =', np.round(pearsonr(y_pred[:, 0], y_test[:, 0]), 5))
 
     # financial evaluation
     portfolio_ret, cum_ret, sharpe_ratio, volatility = preprocessing_module.financialEvaluation(test_data_with_dates,
@@ -296,7 +295,7 @@ if __name__ == '__main__':
     print('Sharpe ratio', sharpe_ratio.values)
     print('Volatility', volatility.values)
     print('Detailed portfolio returns', portfolio_ret)
-
+    '''
     # train and test model #5 (max Cosine Similarity)
     print('MAX COSINE SIMILARITY')
     # reshape y_val
@@ -331,7 +330,9 @@ if __name__ == '__main__':
     print('Sharpe ratio', sharpe_ratio.values)
     print('Volatility', volatility.values)
     print('Detailed portfolio returns', portfolio_ret)
+    '''
 
+    '''
     # train and test model #6 (min Mean Squared Logarithmic Error)
     print('MIN SQUARED LOGARITHMIC ERROR')
     # reshape y_val
@@ -366,7 +367,7 @@ if __name__ == '__main__':
     print('Sharpe ratio', sharpe_ratio.values)
     print('Volatility', volatility.values)
     print('Detailed portfolio returns', portfolio_ret)
-
+    '''
     # train and test model #7 (max portfolio return)
     print('MAX PORTFOLIO RETURN')
     # reshape y_val
@@ -374,13 +375,9 @@ if __name__ == '__main__':
     history = model.fit(np.concatenate((X_train, X_val), axis=0), np.concatenate((y_train, y_val), axis=0),
                         batch_size=100, epochs=10, validation_data=(X_val, y_val), verbose=False)
 
-    plt.figure(7)
-    plt.plot(history.history['loss'], color='b', label='train loss')
-    plt.plot(history.history['val_loss'], color='r', label='val_loss')
-    plt.xlabel('epochs')
-    plt.ylabel('Cosine similarity loss')
-    plt.legend()
-    plt.title('Training loss for MAX PROFIT model')
+    ax[4].plot(history.history['loss'], color='b', label='train loss')
+    ax[4].plot(history.history['val_loss'], color='r', label='val_loss')
+    ax[4].set_title('Training loss for MAX PROFIT model')
 
     # make predictions on test set and evaluate
     y_pred = model.predict(X_test)
@@ -392,6 +389,7 @@ if __name__ == '__main__':
     print('Huber =', np.round(huber, 5))
     print('Cosine Similarity =', np.round(cs, 5))
     print('MSLE =', np.round(msle, 5))
+    print('Pearson Correlation =', np.round(pearsonr(y_pred[:, 0], y_test[:, 0]), 5))
 
     # financial evaluation
     portfolio_ret, cum_ret, sharpe_ratio, volatility = preprocessing_module.financialEvaluation(test_data_with_dates, y_pred)
@@ -399,16 +397,4 @@ if __name__ == '__main__':
     print('Sharpe ratio', sharpe_ratio.values)
     print('Volatility', volatility.values)
     print('Detailed portfolio returns', portfolio_ret)
-
-    # scatter plot predictions vs real
-    plt.figure(8)
-    plt.scatter(y_test, predictions[0], color='b', label='min mse model', s=25)
-    plt.scatter(y_test, predictions[1], color='g', label='min mae model', s=25)
-    plt.scatter(y_test, predictions[2], color='g', label='max R-squared model', s=25)
-    plt.scatter(y_test, predictions[3], color='c', label='max return model', s=25)
-    #plt.scatter(y_test, y_test, color='r', label='real values', s=25, alpha=0.5)
-    plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
-    plt.legend()
-    plt.title('Correlation between predictions and real returns')
-
 

@@ -173,6 +173,15 @@ def featureEngineering(tickers):
         # Merge Fundamental and price data
         FD.sort_values(by=['date'], inplace=True)
         FD = FD.merge(prices, how='outer', on=['date', 'ticker'])
+
+        # Merge macroeconomic variables
+        macroeconomics = pd.read_csv('macro.csv')
+        macroeconomics = macroeconomics.loc[
+            (macroeconomics['date'] >= '2016-12-31') & (macroeconomics['date'] <= '2021-10-01')]
+        macroeconomics.drop(columns='date', inplace=True)
+        macroeconomics.reset_index(inplace=True, drop=True)
+        FD = FD.join(macroeconomics)
+
         data = data.append(FD)
 
     return data
